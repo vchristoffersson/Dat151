@@ -1,0 +1,51 @@
+PDefs.	Program ::= [Def] ;
+
+terminator Def "" ;
+
+
+comment "//" ;
+comment "/*" "*/" ;
+comment "#" ;
+
+
+DFun.	Def	::= Type Id "(" [Arg] ")" "{" [Stm] "}" ;
+separator Arg "," ;
+terminator Stm "" ;
+
+ADecl.	Arg	::= Type Id ;
+SExp.	Stm	::= Exp ";" ;
+
+SReturn. Stm	::= "return" Exp ";" ;
+
+
+
+ELShift.	Exp10 ::= Exp10 "<<" Exp11 ;
+ERShift.	Exp10 ::= Exp10 ">>" Exp11 ;
+
+EQConstant.	Exp16 ::= QConst ;
+ELiteral.	Exp16 ::= Literals ;
+
+
+TInt.		Type ::= "int" ;
+TBool.		Type ::= "bool" ;
+TDouble.	Type ::= "double" ;
+TChar.		Type ::= "char" ;
+TVoid.		Type ::= "void" ;
+TQConst.	Type ::= QConst ;
+TTemp.		Type ::= Id "<" [Type] ">" ;
+TId.		Type ::= Id ;
+
+
+token Id (letter (letter | digit | '_')*) ;
+
+
+LInt.		Literals ::= Integer ;
+LString.	Literals ::= [String] ;
+separator nonempty String "" ;
+
+
+QConstant. QConst ::= QCList "::" [QCList] ;
+separator nonempty QCList "::" ;
+QCElem. QCList ::= Id ;
+QCTemp. QCList ::= Id "<" [Type] ">" ;
+separator Type "," ;
