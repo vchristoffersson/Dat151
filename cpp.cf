@@ -1,30 +1,112 @@
+
+
+--Programs
+
 PDefs.	Program ::= [Def] ;
 
 terminator Def "" ;
 
+--Comments
 
 comment "//" ;
 comment "/*" "*/" ;
 comment "#" ;
 
+--Declarations
+
+DecVar. 	Decl 		::= Type Id "=" Exp ";" ;
+DecCon. 	Decl 		::= "const" Type Id "=" Exp ";" ;
+DecEmpty. 	DeclInit	::= Type Id ;
+Dcls. 		DeclInit 	::= Type Id "," [Id] ;
+
+separator nonempty Id "," ;
+
+
+--Defintions
 
 DFun.	Def	::= Type Id "(" [Arg] ")" "{" [Stm] "}" ;
+DUse. 	Def 	::= "using" QConst ";";
+DType. 	Def ::= TypeDef ";" ;  
+DDcl. 	Def ::= Decl ";" ;
 separator Arg "," ;
 terminator Stm "" ;
 
+
+--Arg declarations
+
 ADecl.	Arg	::= Type Id ;
-SExp.	Stm	::= Exp ";" ;
+ADeclE.	Arg	::= Type ;
+ADecEq.	Arg	::= Type Id "=" Exp ;
+ADecC.	Arg	::= "const" Type "&" Id ;
 
-SReturn. Stm	::= "return" Exp ";" ;
+--Statements
 
+SExp.		Stm	::= Exp ";" ;
+SReturn. 	Stm	::= "return" Exp ";" ;
+SDecl.		Stm	::= Type Id ";" ;
+SInit.		Stm	::= Type Id "=" Exp ";" ;
+SType. 		Stm 	::= TypeDef ";" ;
+SDecls.		Stm	::= Type Id "," [Id] ";" ;     
+SWhile.		Stm	::= "while" "(" Exp ")" Stm ;
+SIf.		Stm	::= "if" "(" Exp ")" Stm ;
+SElse.		Stm 	::= "if" "(" Exp ")" Stm "else" Stm ;
+SBlocks.	Stm 	::= "{" [Stm] "}" ;
 
+--Expressions
+
+EQConstant.	Exp16 ::= QConst ;
+
+EInt. 		Exp16 ::= Integer ;
+EChar. 		Exp16 ::= Char ;
+EDoub. 		Exp16 ::= Double ; 
+EStr. 		Exp16 ::= [String] ;
+
+separator nonempty String "" ; 
+
+EIndex.		Exp15 ::= Exp15 "[" Exp "]" ;
+EFuncc.		Exp15 ::= Exp15 "(" [Exp] ")" ;
+EStructp.	Exp14 ::= Exp14 "->" Exp15 ;
+EStructpd.	Exp14 ::= Exp14 "." Exp15 ;
+EIncre.		Exp14 ::= Exp15 "++" ;
+EDecre.		Exp14 ::= Exp15 "--" ;
+
+EPIncre.	Exp13 ::= "++" Exp14 ;
+EPDecre.	Exp13 ::= "--" Exp14 ;
+EDerefer.	Exp13 ::= "*" Exp14 ;
+ENegation.	Exp13 ::= "!" Exp14 ;
+
+EMul.		Exp12 ::= Exp12 "*" Exp13 ;
+EDiv.		Exp12 ::= Exp12 "/" Exp13 ;
+ERem.		Exp12 ::= Exp12 "%" Exp13 ;
+
+EAdd.		Exp11 ::= Exp11 "+" Exp12 ;
+ESub.		Exp11 ::= Exp11 "-" Exp12 ;
 
 ELShift.	Exp10 ::= Exp10 "<<" Exp11 ;
 ERShift.	Exp10 ::= Exp10 ">>" Exp11 ;
 
-EQConstant.	Exp16 ::= QConst ;
-ELiteral.	Exp16 ::= Literals ;
+ELess.		Exp9 ::= Exp9 "<" Exp10 ;
+ELarger.	Exp9 ::= Exp9 ">" Exp10 ;
+ELesse.		Exp9 ::= Exp9 "<=" Exp10 ;
+ELargere.	Exp9 ::= Exp9 ">=" Exp10 ;
+EEqual.		Exp8 ::= Exp8 "==" Exp9 ;
+EInEqual.	Exp8 ::= Exp8 "!=" Exp9 ;
 
+EConj.		Exp4 ::= Exp4 "&&" Exp5 ;
+EDisj.		Exp3 ::= Exp3 "||" Exp4 ;
+EAssig.		Exp2 ::= Exp3 "=" Exp2 ;
+EAssigadd.	Exp2 ::= Exp3 "+=" Exp2 ;
+EAssignneg.	Exp2 ::= Exp3 "-=" Exp2 ;
+ECond.		Exp2 ::= Exp3 "?" Exp2 ":" Exp2 ;
+
+EThrow.		Exp1 ::= "throw" Exp2 ;
+
+separator Exp "," ;
+coercions Exp 16 ;
+
+--Types
+
+TDef. 		TypeDef ::= "typedef" Type Id;
 
 TInt.		Type ::= "int" ;
 TBool.		Type ::= "bool" ;
@@ -34,18 +116,18 @@ TVoid.		Type ::= "void" ;
 TQConst.	Type ::= QConst ;
 TTemp.		Type ::= Id "<" [Type] ">" ;
 TId.		Type ::= Id ;
+TRef.		Type ::= Type "&" ;
+
+
+
+--Qual Constants
+
+QConstant. QConst ::= [QElem] ;
+QConstCId. QElem ::= Id;
+QConstTp. QElem ::= Id "<" [Type] ">";
+separator nonempty QElem "::";
+separator nonempty Type ",";
 
 
 token Id (letter (letter | digit | '_')*) ;
 
-
-LInt.		Literals ::= Integer ;
-LString.	Literals ::= [String] ;
-separator nonempty String "" ;
-
-
-QConstant. QConst ::= QCList "::" [QCList] ;
-separator nonempty QCList "::" ;
-QCElem. QCList ::= Id ;
-QCTemp. QCList ::= Id "<" [Type] ">" ;
-separator Type "," ;
