@@ -18,7 +18,6 @@ DecEmpty. DeclInit ::= Type Id ;
 DecConEmp. DeclInit ::= "const" Type Id ;
 Dcls. DeclInit ::= Type Id "," [Id] ;
 
-
 separator nonempty Id "," ;
 
 
@@ -38,9 +37,9 @@ terminator Stm "" ;
 ADecl. Arg ::= Type Id ;
 ADeclE. Arg ::= Type ;
 ADecEq. Arg ::= Type Id "=" Exp ;
-
-ADecC. Arg ::= "const" Type "&" Id ;
-ADecCC. Arg ::= "const" Type "&" ;
+ADecC. Arg ::= "const" Type Id ;
+ADecCA. Arg ::= "const" Type "&" Id ;
+ADecCCA. Arg ::= "const" Type "&" ;
 
 --Statements
 
