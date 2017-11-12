@@ -11,15 +11,16 @@ comment "/*" "*/" ;
 comment "#" ;
 
 --Declarations
+DecVar. Decl ::= Type [Dec] ;
+DecVarC. Decl ::= "const" Type [Dec] ;
+separator nonempty Dec "," ;
 
-DecVar. Decl ::= Type Id "=" Exp ;
-DecCon. Decl ::= "const" Type Id "=" Exp ;
-DecEmpty. DeclInit ::= Type Id ;
-DecConEmp. DeclInit ::= "const" Type Id ;
-Dcls. DeclInit ::= Type Id "," [Id] ;
+Decl. Dec ::= Id;
+DeclInit. Dec ::= Id "=" Exp ;
+
+
 
 separator nonempty Id "," ;
-
 
 --Defintions
 
@@ -46,7 +47,7 @@ ADecCCA. Arg ::= "const" Type "&" ;
 SExp. Stm ::= Exp ";" ;
 SReturn. Stm ::= "return" Exp ";" ;
 SDecl. Stm ::= Decl ";" ;
-SInit. Stm ::= DeclInit ";" ;
+--SInit. Stm ::= DeclInit ";" ;
 --SCDecl. Stm ::= "const" Type Id ";" ;
 --SCInit. Stm ::= "const" Type Id "=" Exp ";" ;
 SType. Stm ::= TypeDef ";" ;
