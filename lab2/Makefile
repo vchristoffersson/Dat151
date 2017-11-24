@@ -6,7 +6,7 @@ JAVAC_FLAGS = -sourcepath .
 JAVA = java
 
 # Name of generated .cup file for bnfc 2.8.1
-CUPFILE = CPP/_cup.cup
+CUPFILE = CPP/CPP.cup
 # WAS: CUPFILE = CPP/CPP.cup
 
 .PHONY: bnfc lab2 clean distclean vclean
