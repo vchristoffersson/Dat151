@@ -24,6 +24,7 @@ public class TypeChecker {
             contexts.addFirst(new HashMap<String , TypeCode>());
         }
 
+
         public TypeCode lookupVar(String id) {
 
             for (HashMap<String , TypeCode> context : contexts) {
@@ -38,6 +39,7 @@ public class TypeChecker {
         }
 
         public void addVar(String id , TypeCode Ty) {
+
 
             HashMap<String , TypeCode> map = contexts.getFirst() ;
 
@@ -118,6 +120,10 @@ public class TypeChecker {
             func.args = new LinkedList<>() ;
 
             for (Arg arg : p.listarg_) {
+                TypeCode t = toTypeCode(((ADecl)arg).type_);
+                if(t == TypeCode.Type_void){
+                    throw new TypeException("function argument can not be of type void");
+                }
                 func.args.addLast(toTypeCode(((ADecl)arg).type_)) ;
             }
 
@@ -166,8 +172,12 @@ public class TypeChecker {
 
         public Env visit(CPP.Absyn.SDecls p, Env env) {
 
+            TypeCode t = toTypeCode(p.type_);
+            if(t == TypeCode.Type_void){
+                throw new TypeException("Cannot declare void variable");
+            }
             for(String id : p.listid_) {
-                env.addVar(id, toTypeCode(p.type_));
+                env.addVar(id, t);
             }
 
             return null;
@@ -404,7 +414,7 @@ public class TypeChecker {
                     throw new TypeException("Cant compare Void or Boolean");
                 }
                 else {
-                    return t1;
+                    return TypeCode.Type_bool;
                 }
             }
 
@@ -421,7 +431,7 @@ public class TypeChecker {
                     throw new TypeException("Cant compare Void or Boolean");
                 }
                 else {
-                    return t1;
+                    return TypeCode.Type_bool;
                 }
             }
 
@@ -437,7 +447,7 @@ public class TypeChecker {
                     throw new TypeException("Cant negate Void or Boolean");
                 }
                 else {
-                    return t1;
+                    return TypeCode.Type_bool;
                 }
             }
 
@@ -454,7 +464,7 @@ public class TypeChecker {
                     throw new TypeException("Cant negate Void or Boolean");
                 }
                 else {
-                    return t1;
+                    return TypeCode.Type_bool;
                 }
             }
 
@@ -471,7 +481,7 @@ public class TypeChecker {
                     throw new TypeException("Void");
                 }
                 else {
-                    return t1;
+                    return TypeCode.Type_bool;
                 }
             }
 
@@ -488,7 +498,7 @@ public class TypeChecker {
                     throw new TypeException("Void");
                 }
                 else {
-                    return t1;
+                    return TypeCode.Type_bool;
                 }
             }
 
@@ -504,7 +514,7 @@ public class TypeChecker {
                     throw new TypeException("conjunction for Boolean only");
                 }
                 else {
-                    return t1;
+                    return TypeCode.Type_bool;
                 }
             }
 
@@ -521,7 +531,7 @@ public class TypeChecker {
                     throw new TypeException("disjunction for Boolean only");
                 }
                 else {
-                    return t1;
+                    return TypeCode.Type_bool;
                 }
             }
 
