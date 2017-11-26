@@ -205,13 +205,12 @@ public class TypeChecker {
 
             TypeCode typeCode = checkExp(p.exp_, env);
             TypeCode returnCode = env.lookupVar("return");
-            if(typeCode != TypeCode.Type_void) {
-                if (typeCode != returnCode){
-                    throw new TypeException("return not of same type as funcreturn");
-                }
+            if(typeCode == returnCode){
                 return null;
+            } else {
+                throw new TypeException("return not of same type as funcreturn");
             }
-            throw new TypeException("val can not be void");
+
         }
 
         public Env visit(CPP.Absyn.SWhile p, Env env) {
@@ -307,7 +306,8 @@ public class TypeChecker {
 
         public TypeCode visit(CPP.Absyn.EPostIncr p, Env env) {
 
-            TypeCode t = checkExp(p, env);
+            //TypeCode t = checkExp(p, env);
+            TypeCode t = env.lookupVar(p.id_);
 
             if((t == TypeCode.Type_void) || (t == TypeCode.Type_bool)) {
                 throw new TypeException("Cant Incr Void or Boolean");
@@ -318,7 +318,8 @@ public class TypeChecker {
 
         public TypeCode visit(CPP.Absyn.EPostDecr p, Env env) {
 
-            TypeCode t = checkExp(p, env);
+            //TypeCode t = checkExp(p, env);
+            TypeCode t = env.lookupVar(p.id_);
 
             if((t == TypeCode.Type_void) || (t == TypeCode.Type_bool)) {
                 throw new TypeException("Cant Decr Void or Boolean");
@@ -329,7 +330,8 @@ public class TypeChecker {
 
         public TypeCode visit(CPP.Absyn.EPreIncr p, Env env) {
 
-            TypeCode t = checkExp(p, env);
+            //TypeCode t = checkExp(p, env);
+            TypeCode t = env.lookupVar(p.id_);
 
             if((t == TypeCode.Type_void) || (t == TypeCode.Type_bool)) {
                 throw new TypeException("Cant Incr Void or Boolean");
@@ -340,7 +342,8 @@ public class TypeChecker {
 
         public TypeCode visit(CPP.Absyn.EPreDecr p, Env env) {
 
-            TypeCode t = checkExp(p, env);
+            //TypeCode t = checkExp(p, env);
+            TypeCode t = env.lookupVar(p.id_);
 
             if((t == TypeCode.Type_void) || (t == TypeCode.Type_bool)) {
                 throw new TypeException("Cant Decr Void or Boolean");
