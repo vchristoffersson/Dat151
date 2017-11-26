@@ -21,7 +21,7 @@ public class TypeChecker {
             contexts = new LinkedList<>();
             signature = new HashMap<> () ;
 
-            contexts.addFirst(new HashMap<String , TypeCode>());
+            addScope();
         }
 
 
@@ -60,6 +60,14 @@ public class TypeChecker {
                 throw new TypeException("There is no [" + id + "] function");
             else
                 return t ;
+        }
+
+        public void addScope(){
+            contexts.addFirst(new HashMap<String, TypeCode>());
+        }
+
+        public void removeScope(){
+            contexts.removeFirst();
         }
     }
 
@@ -136,7 +144,7 @@ public class TypeChecker {
 
         public Object visit(CPP.Absyn.DFun p , Env env) {
 
-            env.contexts.addFirst(new HashMap<String , TypeCode>());
+            env.addScope();
 
             for (Arg arg : p.listarg_) {
                 ADecl decl = (ADecl)arg ;
@@ -151,7 +159,7 @@ public class TypeChecker {
                 checkStm(stm , env);
             }
 
-            env.contexts.removeFirst();
+            env.removeScope();
 
             return null;
         }
@@ -209,7 +217,9 @@ public class TypeChecker {
         public Env visit(CPP.Absyn.SWhile p, Env env) {
             TypeCode typeCode = checkExp(p.exp_, env);
             if(typeCode == TypeCode.Type_bool){
+                env.addScope();
                 checkStm(p.stm_, env);
+                env.removeScope();
                 return null;
             }
             throw new TypeException("expression in while must be of type boolean");
@@ -217,20 +227,24 @@ public class TypeChecker {
         }
 
         public Env visit(CPP.Absyn.SBlock p, Env env) {
-            env.contexts.addFirst(new HashMap<String, TypeCode>());
+            env.addScope();
 
             for (Stm stm: p.liststm_) {
                 checkStm(stm, env);
             }
-            env.contexts.removeFirst();
+            env.removeScope();
             return null;
         }
 
         public Env visit(CPP.Absyn.SIfElse p, Env env) {
             TypeCode typeCode = checkExp(p.exp_, env);
             if(typeCode == TypeCode.Type_bool){
+                env.addScope();
                 checkStm(p.stm_1, env);
+                env.removeScope();
+                env.addScope();
                 checkStm(p.stm_2, env);
+                env.removeScope();
                 return null;
             }
             throw new TypeException("Expression must be of type boolean");
