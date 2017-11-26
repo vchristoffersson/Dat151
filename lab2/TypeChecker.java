@@ -62,7 +62,7 @@ public class TypeChecker {
     }
 
     // entry point of type checker
-    public void typecheck(Program p) {
+    public Void typecheck(Program p) {
 
         Env env = new Env() ;
 
@@ -94,6 +94,15 @@ public class TypeChecker {
 
         for(Def d : ((PDefs) p).listdef_) {
             d.accept(new FuncStmVisitor() , env);
+        }
+
+        FunType mFun = env.lookupFun("main");
+        if(mFun.val != TypeCode.Type_int){
+            throw new TypeException("return value of main function must be int");
+        } else if (mFun.args.size() == 0 || mFun.args.size() == 2){
+            return null;
+        } else {
+            throw new TypeException("main function must have 0 or 2 arguments");
         }
     }
 
