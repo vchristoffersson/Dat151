@@ -251,15 +251,15 @@ public class TypeChecker {
 
             FunType funType = env.lookupFun(p.id_);
 
-            LinkedList funcList = funType.args;
-            LinkedList decList = p.listexp_;
+            LinkedList<TypeCode> funcList = funType.args;
+            LinkedList<Exp> decList = p.listexp_;
 
             if (funcList.size() == decList.size()){
 
                 for (int i=0; i < decList.size(); i++) {
 
-                    TypeCode funcType = toTypeCode((Type)funcList.get(i));
-                    TypeCode decType = toTypeCode((Type)decList.get(i));
+                    TypeCode funcType = funcList.get(i);
+                    TypeCode decType = checkExp(decList.get(i), env);
 
                     if(funcType != decType) {
                         throw new TypeException("argument type does not match functype");
