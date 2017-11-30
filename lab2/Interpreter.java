@@ -2,8 +2,11 @@ import CPP.Absyn.*;
 
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.Scanner;
 
 public class Interpreter {
+
+    Scanner scanner = new Scanner(System.in);
 
     public static class FunInter {
         public LinkedList<String> args;
@@ -43,13 +46,21 @@ public class Interpreter {
             for (HashMap<String, Val> context: contexts) {
                 if(context.containsKey(id_)){
                     context.put(id_, val);
-                    break;
+                    return;
                 }
             }
         }
 
         public void addVar(String id) {
             contexts.getFirst().put(id, null);
+        }
+
+        public FunInter findFun(String id){
+            FunInter funInter = signature.get(id);
+            if(funInter == null){
+                throw new RuntimeException("Function not found:" + id);
+            }
+            return funInter;
         }
     }
 
@@ -69,7 +80,10 @@ public class Interpreter {
 
             FunInter mainFun =  env.signature.get("main");
             for (Stm stm : mainFun.stmlist) {
-                stmInter(stm, env);
+                Val val = stmInter(stm, env);
+                if(val != null){
+                    return null;
+                }
             }
 
             return null;
@@ -130,8 +144,9 @@ public class Interpreter {
 
         @Override
         public Val visit(SInit p, Env env) {
-            env.addVar(p.id_);
-            env.updateVar(p.id_, expInter(p.exp_, env));
+            String id = p.id_;
+            env.addVar(id);
+            env.updateVar(id, expInter(p.exp_, env));
             return null;
         }
 
@@ -142,6 +157,8 @@ public class Interpreter {
 
         @Override
         public Val visit(SWhile p, Env env) {
+
+            /*
             while(true){
                 Val val = expInter(p.exp_, env);
                 if(val.getBoolean()){
@@ -156,6 +173,22 @@ public class Interpreter {
                 }
             }
 
+            return null;
+        */
+            //cleaner solution
+            Val exp = expInter(p.exp_, env);
+            if(exp.getBoolean()){
+                env.addScope();
+                Val stm = stmInter(p.stm_, env);
+                env.removeScope();
+
+                if(stm != null){
+                    return stm;
+                } else {
+                    stmInter(p, env);
+                }
+
+            }
             return null;
         }
 
@@ -222,7 +255,40 @@ public class Interpreter {
 
         @Override
         public Val visit(EApp p, Env env) {
-            //@todo
+            String id = p.id_;
+            if(id.equals("printInt") || id.equals("printDouble")){
+                Val val = expInter(p.listexp_.getFirst() ,env);
+                System.out.println(val.toString());
+                return new Val.VVoid();
+            } else if(id.equals("readInt")){
+                int i = scanner.nextInt();
+                //System.out.println("reading int: " + i);
+
+                return new Val.VInt(i);
+            } else if(id.equals("readDouble")){
+                double d = scanner.nextDouble();
+                return new Val.VDouble(d);
+            } else {
+                FunInter funInter = env.findFun(p.id_);
+                LinkedList<Val> evalList = new LinkedList<>();
+                for (Exp exp : p.listexp_) {
+                    evalList.addLast(expInter(exp, env));
+                }
+                env.addScope();
+                for (String s : funInter.args) {
+                    env.addVar(s);
+                    env.updateVar(s, evalList.remove());
+                }
+                for (Stm stm : funInter.stmlist) {
+                    Val val = stmInter(stm, env);
+                    if (val != null) {
+                        env.removeScope();
+                        return val;
+                    }
+                }
+            }
+            env.removeScope();
+
             return null;
         }
 
@@ -462,9 +528,11 @@ public class Interpreter {
         public double getDouble(){
             throw new RuntimeException("not a double");
         }
-
         public boolean getBoolean(){
             throw new RuntimeException("not a boolean");
+        }
+        public void getVoid(){
+            throw new RuntimeException("not a void");
         }
 
         public static class VBoolean extends Val{
@@ -496,6 +564,10 @@ public class Interpreter {
             public boolean isInt(){
                 return true;
             }
+
+            public String toString(){
+                return String.valueOf(i);
+            }
         }
 
         public static class VDouble extends Val{
@@ -509,8 +581,16 @@ public class Interpreter {
             public double getDouble(){
                 return d;
             }
+
+            public String toString(){
+                return String.valueOf(d);
+            }
         }
 
+        public static class VVoid extends Val {
+            public void getVoid() {
+            }
+        }
 
 
     }
