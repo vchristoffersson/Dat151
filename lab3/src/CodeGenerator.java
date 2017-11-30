@@ -53,6 +53,17 @@ public class CodeGenerator {
 
             return i;
         }
+
+        /*
+        public void setVar(String id, TypeCode t){
+            for (HashMap<String, Integer> map : vars) {
+                if (map.containsKey(id)) {
+                    map.put(id, t);
+                }
+            }
+        }
+        */
+
     }
 
     private Env env = new Env();
@@ -66,11 +77,15 @@ public class CodeGenerator {
 
         @Override
         public Object visit(SExp p, Object arg) {
+            compileExp(p.exp_, env);
             return null;
         }
 
         @Override
         public Object visit(SDecls p, Object arg) {
+            for(String id : p.listid_) {
+                env.addVar(id, typeCodeExp(p.type_));
+            }
             return null;
         }
 
@@ -81,6 +96,8 @@ public class CodeGenerator {
 
         @Override
         public Object visit(SReturn p, Object arg) {
+            compileExp(p.exp_, arg);
+            emit("ireturn");
             return null;
         }
 
