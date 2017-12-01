@@ -10,7 +10,7 @@ public class CodeGenerator {
         INT , DOUBLE , BOOL , VOID
     }
 
-    private LinkedList<String> emits = new LinkedList<>();
+    private LinkedList<String> emits;
 
     private void emit(String s)
     {
@@ -54,19 +54,33 @@ public class CodeGenerator {
             return i;
         }
 
-        /*
-        public void setVar(String id, TypeCode t){
-            for (HashMap<String, Integer> map : vars) {
-                if (map.containsKey(id)) {
-                    map.put(id, t);
-                }
-            }
+        public void addScope(){
+            vars.addFirst(new HashMap<String, Integer>());
         }
-        */
+
+        public void removeScope(){
+            vars.removeFirst();
+        }
 
     }
 
     private Env env = new Env();
+
+    public void generateCode(Program p, String name){
+        emits = new LinkedList<>();
+
+        emit(".class public " + name);
+        emit(".super java/lang/Object");
+        emit(".method public <init>()V");
+        emit("aload_0");
+        emit("invokenonvirtual java/lang/Object/&lt;init>()V");
+        emit("return");
+        emit(".end method");
+
+        //add main function
+        //add predefined functions
+        //add program functions
+    }
 
     private void compileStm(Stm st, Object arg) {
         st.accept(new StmCompiler(), arg);
@@ -78,6 +92,7 @@ public class CodeGenerator {
         @Override
         public Object visit(SExp p, Object arg) {
             compileExp(p.exp_, env);
+            emit("pop");
             return null;
         }
 
@@ -91,6 +106,9 @@ public class CodeGenerator {
 
         @Override
         public Object visit(SInit p, Object arg) {
+            compileExp(p.exp_, arg);
+            env.addVar(p.id_, typeCodeExp(p.type_));
+            emit("istore" + env.lookupVar(p.id_));
             return null;
         }
 
@@ -103,16 +121,37 @@ public class CodeGenerator {
 
         @Override
         public Object visit(SWhile p, Object arg) {
+            //new startlabel
+            //new endlabel
+            emit("WHILE:");
+            compileExp(p.exp_, arg);
+            emit("ifeq END");
+            compileStm(p.stm_, arg);
+            emit("goto WHILE");
+            emit("END");
             return null;
         }
 
         @Override
         public Object visit(SBlock p, Object arg) {
+            env.addScope();
+
+            for (Stm blockStm : p.liststm_) {
+                compileStm(blockStm, arg);
+            }
+            env.removeScope();
             return null;
         }
 
         @Override
         public Object visit(SIfElse p, Object arg) {
+            compileExp(p.exp_, arg);
+            emit("ifeq END");
+            compileStm(p.stm_1, arg);
+            emit("goto TRUE");
+            emit("FALSE:");
+            compileStm(p.stm_2, arg);
+            emit("TRUE:");
             return null;
         }
     }
