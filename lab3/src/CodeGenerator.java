@@ -1,4 +1,5 @@
 import CPP.Absyn.*;
+import CPP.VisitSkel;
 
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -78,8 +79,65 @@ public class CodeGenerator {
         emit(".end method");
 
         //add main function
+        emit(".method public static main([Ljava/lang/String;)V");
+        emit("invokestatic " + name + "/main()I");
+        emit("pop");
+        emit("return");
+        emit(".end method");
+
         //add predefined functions
+        emit("invokestatic runtime/printInt(I)V");
+        emit("invokestatic runtime/readInt()I");
+
         //add program functions
+        //@TODO add missing parts
+        compileProgram(p, null);
+
+    }
+
+    private void compileProgram(Program p, Object arg) {
+        p.accept(new ProgramCompiler(), arg);
+    }
+
+    private class ProgramCompiler implements Program.Visitor<Object, Object> {
+
+        @Override
+        public Object visit(PDefs p, Object arg) {
+            for (Def def : p.listdef_) {
+                compileDef(def, arg);
+            }
+
+            return null;
+        }
+    }
+
+    private void compileDef(Def d, Object arg){
+        d.accept(new DefCompiler(), arg);
+    }
+
+    private class DefCompiler implements Def.Visitor<Object, Object> {
+
+        @Override
+        public Object visit(DFun p, Object arg) {
+
+            //new scope?
+            //find value for limit locals and limit stack
+            emit(".method public static " + p.id_ + "JVMfuntype");
+            emit(".limit locals " + "calc(ll)");
+            emit(".limit stack " + "calc(ls)");
+
+            //compile function
+            for (Stm stm : p.liststm_) {
+                compileStm(stm, arg);
+            }
+
+
+            //also check for main function to change return
+            emit("return");
+
+            emit(".end method");
+            return null;
+        }
     }
 
     private void compileStm(Stm st, Object arg) {
