@@ -574,23 +574,7 @@ public class CodeGenerator {
             return null;
         }
 
-        @Override
-        public Integer visit(EOr p, Object arg) {
-
-            compileExp(p.exp_1, arg);
-            emit("ifne LTrue");
-
-            compileExp(p.exp_2, arg);
-            emit("ifne LTrue");
-
-            emit("ldc 0");
-            emit("goto LEnd");
-            emit("LTrue" + ":");
-            emit("ldc 1");
-            emit("LEnd" + ":");
-
-            return null;
-        }
+    
 
         @Override
         public Integer visit(EAss p, Object arg) {
