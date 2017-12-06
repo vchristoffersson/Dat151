@@ -1,8 +1,7 @@
 import CPP.Absyn.*;
 import CPP.VisitSkel;
 
-import java.util.HashMap;
-import java.util.LinkedList;
+import java.util.*;
 
 public class CodeGenerator {
 
@@ -21,6 +20,7 @@ public class CodeGenerator {
     public static class Env {
         private LinkedList<HashMap<String,Integer>> vars;
         private Integer maxvar;
+        private Map<String, FunType> signature;
 
         public Env() {
             vars = new LinkedList<>();
@@ -67,7 +67,55 @@ public class CodeGenerator {
 
     private Env env = new Env();
 
-    public void generateCode(Program p, String name){
+    //Class to handle funtion type, arguments and head in JVM
+    private class FunType {
+        String jvmId;
+        LinkedList<Type> args;
+        Type retType;
+
+        FunType(String jvmId, LinkedList<Type> args, Type retType){
+            this.jvmId = jvmId;
+            this.args = args;
+            this.retType = retType;
+        }
+
+        String generateJVM(){
+            String funArg = "(";
+            for (Type t : args){
+                funArg = funArg + compileType(t, null);
+                }
+            funArg = funArg + ")";
+            funArg = funArg + compileType(retType, null);
+
+            return funArg;
+        }
+
+        String compileType(Type t, Object arg){
+            return t.accept(new TypeCompiler(), arg);
+        }
+        class TypeCompiler implements Type.Visitor<String,Object>
+        {
+            public String visit(CPP.Absyn.Type_bool p, Object arg)
+            {
+                return "Z";
+            }
+            public String visit(CPP.Absyn.Type_int p, Object arg)
+            {
+                return "I";
+            }
+            public String visit(CPP.Absyn.Type_double p, Object arg)
+            {
+                return "D";
+            }
+            public String visit(CPP.Absyn.Type_void p, Object arg)
+            {
+                return "V";
+            }
+        }
+    }
+
+    //Program entry
+    public LinkedList<String> generateCode(Program p, String name){
         emits = new LinkedList<>();
 
         emit(".class public " + name);
@@ -86,15 +134,35 @@ public class CodeGenerator {
         emit(".end method");
 
         //add predefined functions
-        emit("invokestatic runtime/printInt(I)V");
-        emit("invokestatic runtime/readInt()I");
+        //emit("invokestatic runtime/printInt(I)V");
+        //emit("invokestatic runtime/readInt()I");
 
         //add program functions
-        //@TODO add missing parts
+        env.signature = new TreeMap<>();
+        LinkedList<Type> args = new LinkedList<>();
+        args.add(new Type_int());
+        env.signature.put("printInt", new FunType("Runtime/printInt", args , new Type_void()));
+        env.signature.put("printInt", new FunType("Runtime/readInt", new LinkedList<>() , new Type_int()));
+
+
+        //Add functions to signature
+        for (Def def: ((PDefs)p).listdef_) {
+            DFun fun = (DFun) def;
+            LinkedList<Type> funArgs = new LinkedList<>();
+            for (Arg a : fun.listarg_) {
+                ADecl decl = (ADecl) a;
+                funArgs.add(decl.type_);
+            }
+
+            env.signature.put(fun.id_, new FunType(name + "/" + fun.id_ , funArgs, fun.type_));
+        }
+
         compileProgram(p, null);
 
+        return emits;
     }
 
+    //Compile all functions in a program
     private void compileProgram(Program p, Object arg) {
         p.accept(new ProgramCompiler(), arg);
     }
@@ -111,6 +179,7 @@ public class CodeGenerator {
         }
     }
 
+    //Compile function
     private void compileDef(Def d, Object arg){
         d.accept(new DefCompiler(), arg);
     }
@@ -121,25 +190,48 @@ public class CodeGenerator {
         public Object visit(DFun p, Object arg) {
 
             //new scope?
+            env.addScope();
+
+
             //find value for limit locals and limit stack
-            emit(".method public static " + p.id_ + "JVMfuntype");
-            emit(".limit locals " + "calc(ll)");
-            emit(".limit stack " + "calc(ls)");
+            emit(".method public static " + p.id_ + env.signature.get(p.id_).generateJVM());
+            emit(".limit locals 100");
+            emit(".limit stack 100");
+
 
             //compile function
+            for (Arg a : p.listarg_) {
+                compileArg(a, arg);
+            }
             for (Stm stm : p.liststm_) {
                 compileStm(stm, arg);
             }
 
 
-            //also check for main function to change return
-            emit("return");
+            //also check for main function to change return?
 
+            emit("return");
             emit(".end method");
+
+            env.removeScope();
             return null;
         }
     }
 
+    //Adds function argument to context
+    private void compileArg(Arg a, Object arg){
+        a.accept(new ArgCompiler(), arg);
+    }
+
+    private class ArgCompiler implements Arg.Visitor<Object,Object> {
+        @Override
+        public Object visit(ADecl p, Object arg) {
+            env.addVar(p.id_, typeCodeExp(p.type_));
+            return null;
+        }
+    }
+
+    //Compiles all statements
     private void compileStm(Stm st, Object arg) {
         st.accept(new StmCompiler(), arg);
     }
