@@ -276,7 +276,7 @@ public class CodeGenerator {
         public Object visit(SInit p, Object arg) {
             compileExp(p.exp_, arg);
             env.addVar(p.id_, typeCodeExp(p.type_));
-            emit("istore" + env.lookupVar(p.id_));
+            emit("istore_" + env.lookupVar(p.id_));
             return null;
         }
 
