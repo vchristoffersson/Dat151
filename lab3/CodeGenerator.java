@@ -32,6 +32,15 @@ public class CodeGenerator {
             maxvar = 0;
         }
 
+        public Integer lookupLabelCount()
+        {
+            return maxvar;
+        }
+        public void addLabelCount()
+        {
+            maxvar  ++ ;
+        }
+
         public void addVar(String x, TypeCode t) {
 
             HashMap<String,Integer > map = vars.getFirst();
@@ -66,6 +75,20 @@ public class CodeGenerator {
 
         public void removeScope(){
             vars.removeFirst();
+        }
+
+        public boolean isFunDecl (String id )
+        {
+            return signature.containsKey(id);
+        }
+        public void updateFun (String id , FunType ft)
+        {
+            signature.put(id , ft) ;
+        }
+        public FunType lookupFun (String id)
+        {
+            FunType t = signature.get(id) ;
+            return t ;
         }
 
     }
@@ -324,7 +347,7 @@ public class CodeGenerator {
         }
     }
 
-    private Object compileExp(Exp e, Object arg) {
+    private Integer compileExp(Exp e, Object arg) {
         return e.accept(new ExpCompiler(), arg);
     }
 
@@ -373,6 +396,17 @@ public class CodeGenerator {
 
         @Override
         public Integer visit(EApp p, Object arg) {
+
+            for(Exp e : p.listexp_)
+                compileExp(e,arg);
+
+            FunType ft = env.lookupFun(p.id_);
+
+            emit("invokestatic " + ft.retType + ft.generateJVM());
+
+            if(ft.retType.equals(TypeCode.VOID))
+                emit("iconst_0");
+
             return null;
         }
 
@@ -649,5 +683,6 @@ public class CodeGenerator {
     }
 
 }
+
 
 
