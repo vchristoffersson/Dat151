@@ -21,8 +21,9 @@ public class TypeChecker {
             contexts = new LinkedList<>();
             signature = new HashMap<> () ;
 
-            contexts.addFirst(new HashMap<String , TypeCode>());
+            addScope();
         }
+
 
         public TypeCode lookupVar(String id) {
 
@@ -38,6 +39,7 @@ public class TypeChecker {
         }
 
         public void addVar(String id , TypeCode Ty) {
+
 
             HashMap<String , TypeCode> map = contexts.getFirst() ;
 
@@ -59,10 +61,18 @@ public class TypeChecker {
             else
                 return t ;
         }
+
+        public void addScope(){
+            contexts.addFirst(new HashMap<String, TypeCode>());
+        }
+
+        public void removeScope(){
+            contexts.removeFirst();
+        }
     }
 
     // entry point of type checker
-    public void typecheck(Program p) {
+    public Void typecheck(Program p) {
 
         Env env = new Env() ;
 
@@ -95,6 +105,15 @@ public class TypeChecker {
         for(Def d : ((PDefs) p).listdef_) {
             d.accept(new FuncStmVisitor() , env);
         }
+
+        FunType mFun = env.lookupFun("main");
+        if(mFun.val != TypeCode.Type_int){
+            throw new TypeException("return value of main function must be int");
+        } else if (mFun.args.size() == 0 || mFun.args.size() == 2){
+            return null;
+        } else {
+            throw new TypeException("main function must have 0 or 2 arguments");
+        }
     }
 
     public class FunctionVisitor implements Def.Visitor<Object , Env> {
@@ -109,6 +128,10 @@ public class TypeChecker {
             func.args = new LinkedList<>() ;
 
             for (Arg arg : p.listarg_) {
+                TypeCode t = toTypeCode(((ADecl)arg).type_);
+                if(t == TypeCode.Type_void){
+                    throw new TypeException("function argument can not be of type void");
+                }
                 func.args.addLast(toTypeCode(((ADecl)arg).type_)) ;
             }
 
@@ -121,7 +144,7 @@ public class TypeChecker {
 
         public Object visit(CPP.Absyn.DFun p , Env env) {
 
-            env.contexts.addFirst(new HashMap<String , TypeCode>());
+            env.addScope();
 
             for (Arg arg : p.listarg_) {
                 ADecl decl = (ADecl)arg ;
@@ -136,7 +159,7 @@ public class TypeChecker {
                 checkStm(stm , env);
             }
 
-            env.contexts.removeFirst();
+            env.removeScope();
 
             return null;
         }
@@ -157,8 +180,12 @@ public class TypeChecker {
 
         public Env visit(CPP.Absyn.SDecls p, Env env) {
 
+            TypeCode t = toTypeCode(p.type_);
+            if(t == TypeCode.Type_void){
+                throw new TypeException("Cannot declare void variable");
+            }
             for(String id : p.listid_) {
-                env.addVar(id, toTypeCode(p.type_));
+                env.addVar(id, t);
             }
 
             return null;
@@ -178,19 +205,20 @@ public class TypeChecker {
 
             TypeCode typeCode = checkExp(p.exp_, env);
             TypeCode returnCode = env.lookupVar("return");
-            if(typeCode != TypeCode.Type_void) {
-                if (typeCode != returnCode){
-                    throw new TypeException("return not of same type as funcreturn");
-                }
+            if(typeCode == returnCode){
                 return null;
+            } else {
+                throw new TypeException("return not of same type as funcreturn");
             }
-            throw new TypeException("val can not be void");
+
         }
 
         public Env visit(CPP.Absyn.SWhile p, Env env) {
             TypeCode typeCode = checkExp(p.exp_, env);
             if(typeCode == TypeCode.Type_bool){
+                env.addScope();
                 checkStm(p.stm_, env);
+                env.removeScope();
                 return null;
             }
             throw new TypeException("expression in while must be of type boolean");
@@ -198,20 +226,24 @@ public class TypeChecker {
         }
 
         public Env visit(CPP.Absyn.SBlock p, Env env) {
-            env.contexts.addFirst(new HashMap<String, TypeCode>());
+            env.addScope();
 
             for (Stm stm: p.liststm_) {
                 checkStm(stm, env);
             }
-            env.contexts.removeFirst();
+            env.removeScope();
             return null;
         }
 
         public Env visit(CPP.Absyn.SIfElse p, Env env) {
             TypeCode typeCode = checkExp(p.exp_, env);
             if(typeCode == TypeCode.Type_bool){
+                env.addScope();
                 checkStm(p.stm_1, env);
+                env.removeScope();
+                env.addScope();
                 checkStm(p.stm_2, env);
+                env.removeScope();
                 return null;
             }
             throw new TypeException("Expression must be of type boolean");
@@ -274,7 +306,8 @@ public class TypeChecker {
 
         public TypeCode visit(CPP.Absyn.EPostIncr p, Env env) {
 
-            TypeCode t = checkExp(p, env);
+            //TypeCode t = checkExp(p, env);
+            TypeCode t = env.lookupVar(p.id_);
 
             if((t == TypeCode.Type_void) || (t == TypeCode.Type_bool)) {
                 throw new TypeException("Cant Incr Void or Boolean");
@@ -285,7 +318,8 @@ public class TypeChecker {
 
         public TypeCode visit(CPP.Absyn.EPostDecr p, Env env) {
 
-            TypeCode t = checkExp(p, env);
+            //TypeCode t = checkExp(p, env);
+            TypeCode t = env.lookupVar(p.id_);
 
             if((t == TypeCode.Type_void) || (t == TypeCode.Type_bool)) {
                 throw new TypeException("Cant Decr Void or Boolean");
@@ -296,7 +330,8 @@ public class TypeChecker {
 
         public TypeCode visit(CPP.Absyn.EPreIncr p, Env env) {
 
-            TypeCode t = checkExp(p, env);
+            //TypeCode t = checkExp(p, env);
+            TypeCode t = env.lookupVar(p.id_);
 
             if((t == TypeCode.Type_void) || (t == TypeCode.Type_bool)) {
                 throw new TypeException("Cant Incr Void or Boolean");
@@ -307,7 +342,8 @@ public class TypeChecker {
 
         public TypeCode visit(CPP.Absyn.EPreDecr p, Env env) {
 
-            TypeCode t = checkExp(p, env);
+            //TypeCode t = checkExp(p, env);
+            TypeCode t = env.lookupVar(p.id_);
 
             if((t == TypeCode.Type_void) || (t == TypeCode.Type_bool)) {
                 throw new TypeException("Cant Decr Void or Boolean");
@@ -395,7 +431,7 @@ public class TypeChecker {
                     throw new TypeException("Cant compare Void or Boolean");
                 }
                 else {
-                    return t1;
+                    return TypeCode.Type_bool;
                 }
             }
 
@@ -412,7 +448,7 @@ public class TypeChecker {
                     throw new TypeException("Cant compare Void or Boolean");
                 }
                 else {
-                    return t1;
+                    return TypeCode.Type_bool;
                 }
             }
 
@@ -428,7 +464,7 @@ public class TypeChecker {
                     throw new TypeException("Cant negate Void or Boolean");
                 }
                 else {
-                    return t1;
+                    return TypeCode.Type_bool;
                 }
             }
 
@@ -445,7 +481,7 @@ public class TypeChecker {
                     throw new TypeException("Cant negate Void or Boolean");
                 }
                 else {
-                    return t1;
+                    return TypeCode.Type_bool;
                 }
             }
 
@@ -462,7 +498,7 @@ public class TypeChecker {
                     throw new TypeException("Void");
                 }
                 else {
-                    return t1;
+                    return TypeCode.Type_bool;
                 }
             }
 
@@ -479,7 +515,7 @@ public class TypeChecker {
                     throw new TypeException("Void");
                 }
                 else {
-                    return t1;
+                    return TypeCode.Type_bool;
                 }
             }
 
@@ -495,7 +531,7 @@ public class TypeChecker {
                     throw new TypeException("conjunction for Boolean only");
                 }
                 else {
-                    return t1;
+                    return TypeCode.Type_bool;
                 }
             }
 
@@ -512,7 +548,7 @@ public class TypeChecker {
                     throw new TypeException("disjunction for Boolean only");
                 }
                 else {
-                    return t1;
+                    return TypeCode.Type_bool;
                 }
             }
 

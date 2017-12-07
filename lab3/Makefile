@@ -1,4 +1,4 @@
-# Makefile for lab2 in java1.5
+# Makefile for lab3 in java1.5
 
 JAVAC = javac
 JAVAC_FLAGS = -sourcepath .
@@ -9,13 +9,13 @@ JAVA = java
 CUPFILE = CPP/CPP.cup
 # WAS: CUPFILE = CPP/CPP.cup
 
-.PHONY: bnfc lab2 clean distclean vclean
+.PHONY: bnfc lab3 clean distclean vclean
 
-all: bnfc lab2
+all: bnfc lab3
 
-lab2:
-	${JAVAC} ${JAVAC_FLAGS} lab2.java
-	chmod a+x lab2
+lab3:
+	${JAVAC} ${JAVAC_FLAGS} lab3.java
+	chmod a+x lab3
 
 bnfc:
 	bnfc -java CPP.cf

@@ -1,6 +1,8 @@
 import CPP.Absyn.*;
 import CPP.VisitSkel;
 
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.*;
 
 public class CodeGenerator {
@@ -14,7 +16,10 @@ public class CodeGenerator {
 
     private void emit(String s)
     {
+        System.out.println("**********--------ADDING " + s + " TO EMITS---------------**************");
         emits.add(s + "\n");
+        System.out.println("**********--------SUCCESSFULLY ADDED " + emits.getLast() + " TO EMITS---------------**************");
+
     }
 
     public static class Env {
@@ -115,7 +120,7 @@ public class CodeGenerator {
     }
 
     //Program entry
-    public LinkedList<String> generateCode(Program p, String name){
+    public void generateCode(Program p, String name, String filepath){
         emits = new LinkedList<>();
 
         emit(".class public " + name);
@@ -159,7 +164,7 @@ public class CodeGenerator {
 
         compileProgram(p, null);
 
-        return emits;
+        writeOut(filepath);
     }
 
     //Compile all functions in a program
@@ -176,6 +181,19 @@ public class CodeGenerator {
             }
 
             return null;
+        }
+    }
+
+    private void writeOut(String filepath){
+        try {
+            FileWriter writer = new FileWriter(filepath + ".j");
+            for (String s : emits) {
+                writer.write(s);
+            }
+            writer.close();
+        }
+        catch (IOException e) {
+            System.err.print("something went wrong when writing to .j file");
         }
     }
 
