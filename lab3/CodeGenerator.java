@@ -1,25 +1,13 @@
 import CPP.Absyn.*;
-import CPP.VisitSkel;
 
-import java.io.FileWriter;
-import java.io.IOException;
 import java.util.*;
+import java.io.*;
 
-public class CodeGenerator {
-
+public class CodeGenerator
+{
     public enum TypeCode
     {
         INT , DOUBLE , BOOL , VOID
-    }
-
-    private LinkedList<String> emits;
-
-    private void emit(String s)
-    {
-        System.out.println("**********--------ADDING " + s + " TO EMITS---------------**************");
-        emits.add(s + "\n");
-        System.out.println("**********--------SUCCESSFULLY ADDED " + emits.getLast() + " TO EMITS---------------**************");
-
     }
 
     public static class Env {
@@ -28,30 +16,19 @@ public class CodeGenerator {
         private Map<String, FunType> signature;
 
         public Env() {
+            signature = new TreeMap<>();
             vars = new LinkedList<>();
+            vars.addFirst(new HashMap<String, Integer>());
             maxvar = 0;
         }
 
-        public Integer lookupLabelCount()
-        {
-            return maxvar;
-        }
-        public void addLabelCount()
-        {
-            maxvar  ++ ;
-        }
-
-        public void addVar(String x, TypeCode t) {
+        public void addVar(String x) {
 
             HashMap<String,Integer > map = vars.getFirst();
             map.put(x, maxvar);
 
-            if(t == TypeCode.DOUBLE) {
-                maxvar += 2;
-            }
-            else {
-                maxvar += 1;
-            }
+            maxvar++;
+
         }
 
         public Integer lookupVar (String id) {
@@ -69,51 +46,65 @@ public class CodeGenerator {
             return i;
         }
 
-        public void addScope(){
+        public void addScope() {
             vars.addFirst(new HashMap<String, Integer>());
         }
 
-        public void removeScope(){
+        public void removeScope() {
             vars.removeFirst();
         }
-
-        public boolean isFunDecl (String id )
-        {
-            return signature.containsKey(id);
-        }
-        public void updateFun (String id , FunType ft)
-        {
-            signature.put(id , ft) ;
-        }
-        public FunType lookupFun (String id)
-        {
+        
+        public FunType lookupFun (String id) {
             FunType t = signature.get(id) ;
             return t ;
         }
 
     }
 
-    private Env env = new Env();
+    private Type typeCodeToType(TypeCode t) {
+
+        switch(t) {
+
+            case INT:
+                return new Type_int();
+
+
+            case BOOL:
+                return new Type_bool();
+
+
+            case VOID:
+                return new Type_void();
+
+            default:
+                return null;
+        }
+
+    }
 
     //Class to handle funtion type, arguments and head in JVM
     private class FunType {
         String jvmId;
-        LinkedList<Type> args;
-        Type retType;
+        LinkedList<TypeCode> args;
+        TypeCode retType;
 
-        FunType(String jvmId, LinkedList<Type> args, Type retType){
+        FunType(String jvmId, LinkedList<TypeCode> args, TypeCode retType){
             this.jvmId = jvmId;
             this.args = args;
             this.retType = retType;
         }
 
         String generateJVM(){
+
             String funArg = "(";
-            for (Type t : args){
-                funArg = funArg + compileType(t, null);
+
+            for (TypeCode t : args){
+                Type tmp = typeCodeToType(t);
+                funArg = funArg + compileType(tmp, null);
             }
+
             funArg = funArg + ")";
-            funArg = funArg + compileType(retType, null);
+            funArg = funArg + compileType(typeCodeToType(retType), null);
 
             return funArg;
         }
@@ -121,8 +112,8 @@ public class CodeGenerator {
         String compileType(Type t, Object arg){
             return t.accept(new TypeCompiler(), arg);
         }
-        class TypeCompiler implements Type.Visitor<String,Object>
-        {
+
+        class TypeCompiler implements Type.Visitor<String,Object> {
             public String visit(CPP.Absyn.Type_bool p, Object arg)
             {
                 return "Z";
@@ -140,6 +131,14 @@ public class CodeGenerator {
                 return "V";
             }
         }
+    }
+
+
+    private Env env = new Env() ;
+    private LinkedList<String> emits = new LinkedList<>();
+
+    private void emit(String s) {
+        emits.add(s + "\n");
     }
 
     //Program entry
@@ -166,23 +165,28 @@ public class CodeGenerator {
         //emit("invokestatic runtime/readInt()I");
 
         //add program functions
-        env.signature = new TreeMap<>();
-        LinkedList<Type> args = new LinkedList<>();
-        args.add(new Type_int());
-        env.signature.put("printInt", new FunType("Runtime/printInt", args , new Type_void()));
-        env.signature.put("printInt", new FunType("Runtime/readInt", args , new Type_int()));
+        env.signature = new HashMap<>();
+
+        LinkedList<TypeCode> args = new LinkedList<>();
+        args.add(TypeCode.INT);
+
+        env.signature.put("printInt", new FunType("Runtime/printInt", args , TypeCode.VOID));
+
+        args = new LinkedList<>();
+
+        env.signature.put("readInt", new FunType("Runtime/readInt", args , TypeCode.INT));
 
 
         //Add functions to signature
         for (Def def: ((PDefs)p).listdef_) {
             DFun fun = (DFun) def;
-            LinkedList<Type> funArgs = new LinkedList<>();
+            LinkedList<TypeCode> funArgs = new LinkedList<>();
             for (Arg a : fun.listarg_) {
                 ADecl decl = (ADecl) a;
-                funArgs.add(decl.type_);
+                funArgs.add(typeCodeExp(decl.type_));
             }
 
-            env.signature.put(fun.id_, new FunType(name + "/" + fun.id_ , funArgs, fun.type_));
+            env.signature.put(fun.id_, new FunType(name + "/" + fun.id_ , funArgs, typeCodeExp(fun.type_)));
         }
 
         compileProgram(p, null);
@@ -231,29 +235,38 @@ public class CodeGenerator {
         public Object visit(DFun p, Object arg) {
 
             //new scope?
-            env.addScope();
 
+
+            FunType ft = env.lookupFun(p.id_);
 
             //find value for limit locals and limit stack
-            emit(".method public static " + p.id_ + env.signature.get(p.id_).generateJVM());
+            emit(".method public static " + p.id_ + ft.generateJVM());
             emit(".limit locals 100");
             emit(".limit stack 100");
 
-
+            env.addScope();
+            env.maxvar = 0;
             //compile function
             for (Arg a : p.listarg_) {
                 compileArg(a, arg);
             }
             for (Stm stm : p.liststm_) {
-                compileStm(stm, arg);
+                compileStm(stm);
             }
 
 
-            //also check for main function to change return?
+            if(ft.retType.equals(TypeCode.INT)) {
+                emit("iconst_0");
+                emit("ireturn");
+            }
 
-            emit("return");
+            else {
+                emit("return");
+            }
+
             emit(".end method");
 
+            env.maxvar = 0;
             env.removeScope();
             return null;
         }
@@ -267,14 +280,14 @@ public class CodeGenerator {
     private class ArgCompiler implements Arg.Visitor<Object,Object> {
         @Override
         public Object visit(ADecl p, Object arg) {
-            env.addVar(p.id_, typeCodeExp(p.type_));
+            env.addVar(p.id_);
             return null;
         }
     }
 
     //Compiles all statements
-    private void compileStm(Stm st, Object arg) {
-        st.accept(new StmCompiler(), arg);
+    private void compileStm(Stm st) {
+        st.accept(new StmCompiler(), null);
     }
 
     private class StmCompiler implements Stm.Visitor<Object,Object> {
@@ -282,7 +295,7 @@ public class CodeGenerator {
 
         @Override
         public Object visit(SExp p, Object arg) {
-            compileExp(p.exp_, env);
+            compileExp(p.exp_);
             emit("pop");
             return null;
         }
@@ -290,22 +303,22 @@ public class CodeGenerator {
         @Override
         public Object visit(SDecls p, Object arg) {
             for(String id : p.listid_) {
-                env.addVar(id, typeCodeExp(p.type_));
+                env.addVar(id);
             }
             return null;
         }
 
         @Override
         public Object visit(SInit p, Object arg) {
-            compileExp(p.exp_, arg);
-            env.addVar(p.id_, typeCodeExp(p.type_));
+            compileExp(p.exp_);
+            env.addVar(p.id_);
             emit("istore_" + env.lookupVar(p.id_));
             return null;
         }
 
         @Override
         public Object visit(SReturn p, Object arg) {
-            compileExp(p.exp_, arg);
+            compileExp(p.exp_);
             emit("ireturn");
             return null;
         }
@@ -315,11 +328,11 @@ public class CodeGenerator {
             //new startlabel
             //new endlabel
             emit("WHILE:");
-            compileExp(p.exp_, arg);
+            compileExp(p.exp_);
             emit("ifeq END");
-            compileStm(p.stm_, arg);
+            compileStm(p.stm_);
             emit("goto WHILE");
-            emit("END");
+            emit("END:");
             return null;
         }
 
@@ -328,7 +341,7 @@ public class CodeGenerator {
             env.addScope();
 
             for (Stm blockStm : p.liststm_) {
-                compileStm(blockStm, arg);
+                compileStm(blockStm);
             }
             env.removeScope();
             return null;
@@ -336,19 +349,23 @@ public class CodeGenerator {
 
         @Override
         public Object visit(SIfElse p, Object arg) {
-            compileExp(p.exp_, arg);
-            emit("ifeq END");
-            compileStm(p.stm_1, arg);
+            compileExp(p.exp_);
+
+            emit("ifeq FALSE");
+            compileStm(p.stm_1);
+
             emit("goto TRUE");
+
             emit("FALSE:");
-            compileStm(p.stm_2, arg);
+            compileStm(p.stm_2);
+
             emit("TRUE:");
             return null;
         }
     }
 
-    private Integer compileExp(Exp e, Object arg) {
-        return e.accept(new ExpCompiler(), arg);
+    private Integer compileExp(Exp e) {
+        return e.accept(new ExpCompiler() , null );
     }
 
     private class ExpCompiler implements Exp.Visitor<Integer, Object> {
@@ -380,8 +397,6 @@ public class CodeGenerator {
         @Override
         public Integer visit(EDouble p, Object arg) {
 
-            emit("ldc2_w " + p.double_);
-
             return null;
         }
 
@@ -398,11 +413,11 @@ public class CodeGenerator {
         public Integer visit(EApp p, Object arg) {
 
             for(Exp e : p.listexp_)
-                compileExp(e,arg);
+                compileExp(e);
 
             FunType ft = env.lookupFun(p.id_);
 
-            emit("invokestatic " + ft.retType + ft.generateJVM());
+            emit("invokestatic " + ft.jvmId + ft.generateJVM());
 
             if(ft.retType.equals(TypeCode.VOID))
                 emit("iconst_0");
@@ -429,7 +444,10 @@ public class CodeGenerator {
         @Override
         public Integer visit(EPostDecr p, Object arg) {
 
-            Integer i = (Integer)compileExp(p, arg);
+            Integer i = env.lookupVar(p.id_);
+
+            emit("iload " + i);
+            emit("dup");
 
             emit("ldc 1");
             emit("isub");
@@ -442,7 +460,8 @@ public class CodeGenerator {
         @Override
         public Integer visit(EPreIncr p, Object arg) {
 
-            Integer i = (Integer)compileExp(p, arg);
+            Integer i = env.lookupVar(p.id_);
+            emit("iload " + i);
 
             emit("ldc 1");
             emit("iadd");
@@ -456,7 +475,8 @@ public class CodeGenerator {
         @Override
         public Integer visit(EPreDecr p, Object arg) {
 
-            Integer i = (Integer)compileExp(p, arg);
+            Integer i = env.lookupVar(p.id_);
+            emit("iload " + i);
 
             emit("ldc 1");
             emit("isub");
@@ -470,8 +490,8 @@ public class CodeGenerator {
         @Override
         public Integer visit(ETimes p, Object arg) {
 
-            compileExp(p.exp_1, arg);
-            compileExp(p.exp_2, arg);
+            compileExp(p.exp_1);
+            compileExp(p.exp_2);
 
             emit("imul");
 
@@ -481,8 +501,8 @@ public class CodeGenerator {
         @Override
         public Integer visit(EDiv p, Object arg) {
 
-            compileExp(p.exp_1, arg);
-            compileExp(p.exp_2, arg);
+            compileExp(p.exp_1);
+            compileExp(p.exp_2);
 
             emit("idiv");
 
@@ -492,8 +512,8 @@ public class CodeGenerator {
         @Override
         public Integer visit(EPlus p, Object arg) {
 
-            compileExp(p.exp_1, arg);
-            compileExp(p.exp_2, arg);
+            compileExp(p.exp_1);
+            compileExp(p.exp_2);
 
             emit("iadd");
 
@@ -503,8 +523,8 @@ public class CodeGenerator {
         @Override
         public Integer visit(EMinus p, Object arg) {
 
-            compileExp(p.exp_1, arg);
-            compileExp(p.exp_2, arg);
+            compileExp(p.exp_1);
+            compileExp(p.exp_2);
 
             emit("isub");
 
@@ -516,8 +536,8 @@ public class CodeGenerator {
 
             emit("ldc 1");
 
-            compileExp(p.exp_1, arg);
-            compileExp(p.exp_2, arg);
+            compileExp(p.exp_1);
+            compileExp(p.exp_2);
 
             emit("if_icmplt L");
             emit("pop");
@@ -532,8 +552,8 @@ public class CodeGenerator {
 
             emit("ldc 1");
 
-            compileExp(p.exp_1, arg);
-            compileExp(p.exp_2, arg);
+            compileExp(p.exp_1);
+            compileExp(p.exp_2);
 
             emit("if_icmpgt L");
             emit("pop");
@@ -548,8 +568,8 @@ public class CodeGenerator {
 
             emit("ldc 1");
 
-            compileExp(p.exp_1, arg);
-            compileExp(p.exp_2, arg);
+            compileExp(p.exp_1);
+            compileExp(p.exp_2);
 
             emit("if_icmple L");
             emit("pop");
@@ -564,8 +584,8 @@ public class CodeGenerator {
 
             emit("ldc 1");
 
-            compileExp(p.exp_1, arg);
-            compileExp(p.exp_2, arg);
+            compileExp(p.exp_1);
+            compileExp(p.exp_2);
 
             emit("if_icmpge L");
             emit("pop");
@@ -580,8 +600,8 @@ public class CodeGenerator {
 
             emit("ldc 1");
 
-            compileExp(p.exp_1, arg);
-            compileExp(p.exp_2, arg);
+            compileExp(p.exp_1);
+            compileExp(p.exp_2);
 
             emit("if_icmpeq L");
             emit("pop");
@@ -595,8 +615,8 @@ public class CodeGenerator {
 
             emit("ldc 1");
 
-            compileExp(p.exp_1, arg);
-            compileExp(p.exp_2, arg);
+            compileExp(p.exp_1);
+            compileExp(p.exp_2);
 
             emit("if_icmpne L");
             emit("pop");
@@ -609,10 +629,10 @@ public class CodeGenerator {
         @Override
         public Integer visit(EAnd p, Object arg) {
 
-            compileExp(p.exp_1, arg);
+            compileExp(p.exp_1);
             emit("ifeq Lf");
 
-            compileExp(p.exp_2, arg);
+            compileExp(p.exp_2);
             emit("ifeq Lf");
 
             emit("ldc 1");
@@ -629,10 +649,10 @@ public class CodeGenerator {
         @Override
         public Integer visit(EOr p, Object arg) {
 
-            compileExp(p.exp_1, arg);
+            compileExp(p.exp_1);
             emit("ifne LTrue");
 
-            compileExp(p.exp_2, arg);
+            compileExp(p.exp_2);
             emit("ifne LTrue");
 
             emit("ldc 0");
@@ -647,7 +667,7 @@ public class CodeGenerator {
         @Override
         public Integer visit(EAss p, Object arg) {
 
-            compileExp(p.exp_, arg);
+            compileExp(p.exp_);
 
             Integer i = env.lookupVar(p.id_);
 
@@ -658,31 +678,28 @@ public class CodeGenerator {
         }
     }
 
-
     private TypeCode typeCodeExp(Type t) {
         return t.accept(new TypeCoder() , null);
     }
 
     private class TypeCoder implements Type.Visitor<TypeCode , Object> {
-
-        public TypeCode visit(Type_bool t, Object arg) {
+        public TypeCode visit(Type_bool t, Object arg)
+        {
             return TypeCode.BOOL ;
         }
-
-        public TypeCode visit(Type_int t, Object arg) {
+        public TypeCode visit(Type_int t, Object arg)
+        {
             return TypeCode.INT ;
         }
-
-        public TypeCode visit(Type_double t, Object arg) {
+        public TypeCode visit(Type_double t, Object arg)
+        {
             return TypeCode.DOUBLE ;
         }
-
-        public TypeCode visit(Type_void t, Object arg) {
+        public TypeCode visit(Type_void t, Object arg)
+        {
             return TypeCode.VOID ;
         }
     }
 
 }
-
-
 
