@@ -14,12 +14,14 @@ public class CodeGenerator
         private LinkedList<HashMap<String,Integer>> vars;
         private Integer maxvar;
         private Map<String, FunType> signature;
+        private int currentLabelId;
 
         public Env() {
             signature = new TreeMap<>();
             vars = new LinkedList<>();
             vars.addFirst(new HashMap<String, Integer>());
             maxvar = 0;
+            currentLabelId = 0;
         }
 
         public void addVar(String x) {
@@ -57,6 +59,10 @@ public class CodeGenerator
         public FunType lookupFun (String id) {
             FunType t = signature.get(id) ;
             return t ;
+        }
+
+        public int nextLabel(){
+            return currentLabelId++;
         }
 
     }
@@ -325,14 +331,15 @@ public class CodeGenerator
 
         @Override
         public Object visit(SWhile p, Object arg) {
-            //new startlabel
-            //new endlabel
-            emit("WHILE:");
+            env.addScope();
+            int labelId = env.nextLabel();
+            emit("WHILE" + labelId + ":");
             compileExp(p.exp_);
-            emit("ifeq END");
+            emit("ifeq END" + labelId);
             compileStm(p.stm_);
-            emit("goto WHILE");
-            emit("END:");
+            emit("goto WHILE" + labelId);
+            emit("END" + labelId + ":");
+            env.removeScope();
             return null;
         }
 
@@ -351,15 +358,16 @@ public class CodeGenerator
         public Object visit(SIfElse p, Object arg) {
             compileExp(p.exp_);
 
-            emit("ifeq FALSE");
+            int labelId = env.nextLabel();
+            emit("ifeq FALSE" + labelId);
             compileStm(p.stm_1);
 
-            emit("goto TRUE");
+            emit("goto TRUE" + labelId);
 
-            emit("FALSE:");
+            emit("FALSE" + labelId + ":");
             compileStm(p.stm_2);
 
-            emit("TRUE:");
+            emit("TRUE" + labelId + ":");
             return null;
         }
     }
@@ -539,10 +547,11 @@ public class CodeGenerator
             compileExp(p.exp_1);
             compileExp(p.exp_2);
 
-            emit("if_icmplt EXIT");
+            int labelId = env.nextLabel();
+            emit("if_icmplt EXIT" + labelId);
             emit("pop");
             emit("ldc 0");
-            emit("EXIT:");
+            emit("EXIT" + labelId + ":");
 
             return null;
         }
@@ -555,10 +564,12 @@ public class CodeGenerator
             compileExp(p.exp_1);
             compileExp(p.exp_2);
 
-            emit("if_icmpgt EXIT");
+            int labelId = env.nextLabel();
+
+            emit("if_icmpgt EXIT" + labelId);
             emit("pop");
             emit("ldc 0");
-            emit("EXIT:");
+            emit("EXIT" + labelId + ":");
 
             return null;
         }
@@ -570,11 +581,12 @@ public class CodeGenerator
 
             compileExp(p.exp_1);
             compileExp(p.exp_2);
+            int labelId = env.nextLabel();
 
-            emit("if_icmple EXIT");
+            emit("if_icmple EXIT" + labelId);
             emit("pop");
             emit("ldc 0");
-            emit("EXIT:");
+            emit("EXIT" + labelId + ":");
 
             return null;
         }
@@ -586,11 +598,12 @@ public class CodeGenerator
 
             compileExp(p.exp_1);
             compileExp(p.exp_2);
+            int labelId = env.nextLabel();
 
-            emit("if_icmpge DONE");
+            emit("if_icmpge DONE" + labelId);
             emit("pop");
             emit("ldc 0");
-            emit("DONE:");
+            emit("DONE" + labelId + ":");
 
             return null;
         }
@@ -603,10 +616,12 @@ public class CodeGenerator
             compileExp(p.exp_1);
             compileExp(p.exp_2);
 
-            emit("if_icmpeq DONE");
+            int labelId = env.nextLabel();
+
+            emit("if_icmpeq DONE" + labelId);
             emit("pop");
             emit("ldc 0");
-            emit("DONE:");
+            emit("DONE" + labelId + ":");
             return null;
         }
 
@@ -618,10 +633,12 @@ public class CodeGenerator
             compileExp(p.exp_1);
             compileExp(p.exp_2);
 
-            emit("if_icmpne DONE");
+            int labelId = env.nextLabel();
+
+            emit("if_icmpne DONE" + labelId);
             emit("pop");
             emit("ldc 0");
-            emit("DONE:");
+            emit("DONE" + labelId + ":");
 
             return null;
         }
@@ -629,37 +646,40 @@ public class CodeGenerator
         @Override
         public Integer visit(EAnd p, Object arg) {
 
+            int labelId = env.nextLabel();
+
             compileExp(p.exp_1);
-            emit("ifeq Lf");
+            emit("ifeq Lf" + labelId);
 
             compileExp(p.exp_2);
-            emit("ifeq Lf");
+            emit("ifeq Lf" + labelId);
 
             emit("ldc 1");
-            emit("goto LEnd");
+            emit("goto LEnd" + labelId);
 
-            emit("Lf" + ":");
+            emit("Lf" + labelId + ":");
             emit("ldc 0");
 
-            emit("LEnd" + ":");
+            emit("LEnd" + labelId + ":");
 
             return null;
         }
 
         @Override
         public Integer visit(EOr p, Object arg) {
+            int labelId = env.nextLabel();
 
             compileExp(p.exp_1);
-            emit("ifne LTrue");
+            emit("ifne LTrue" + labelId);
 
             compileExp(p.exp_2);
-            emit("ifne LTrue");
+            emit("ifne LTrue" + labelId);
 
             emit("ldc 0");
-            emit("goto LEnd");
-            emit("LTrue" + ":");
+            emit("goto LEnd" + labelId);
+            emit("LTrue" + labelId + ":");
             emit("ldc 1");
-            emit("LEnd" + ":");
+            emit("LEnd" + labelId + ":");
 
             return null;
         }
