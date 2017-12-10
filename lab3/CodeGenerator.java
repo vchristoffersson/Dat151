@@ -310,6 +310,10 @@ public class CodeGenerator
         public Object visit(SDecls p, Object arg) {
             for(String id : p.listid_) {
                 env.addVar(id);
+                if(p.type_.equals(new Type_int())) {
+                    emit("iconst_0");
+                    emit("istore " + env.lookupVar(id));
+                }
             }
             return null;
         }
@@ -318,7 +322,7 @@ public class CodeGenerator
         public Object visit(SInit p, Object arg) {
             compileExp(p.exp_);
             env.addVar(p.id_);
-            emit("istore_" + env.lookupVar(p.id_));
+            emit("istore " + env.lookupVar(p.id_));
             return null;
         }
 
@@ -647,7 +651,6 @@ public class CodeGenerator
         public Integer visit(EAnd p, Object arg) {
 
             int labelId = env.nextLabel();
-
             compileExp(p.exp_1);
             emit("ifeq Lf" + labelId);
 
@@ -668,7 +671,6 @@ public class CodeGenerator
         @Override
         public Integer visit(EOr p, Object arg) {
             int labelId = env.nextLabel();
-
             compileExp(p.exp_1);
             emit("ifne LTrue" + labelId);
 
