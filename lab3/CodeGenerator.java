@@ -53,7 +53,7 @@ public class CodeGenerator
         public void removeScope() {
             vars.removeFirst();
         }
-        
+
         public FunType lookupFun (String id) {
             FunType t = signature.get(id) ;
             return t ;
@@ -539,10 +539,10 @@ public class CodeGenerator
             compileExp(p.exp_1);
             compileExp(p.exp_2);
 
-            emit("if_icmplt L");
+            emit("if_icmplt EXIT");
             emit("pop");
             emit("ldc 0");
-            emit("L" + ":");
+            emit("EXIT:");
 
             return null;
         }
@@ -555,10 +555,10 @@ public class CodeGenerator
             compileExp(p.exp_1);
             compileExp(p.exp_2);
 
-            emit("if_icmpgt L");
+            emit("if_icmpgt EXIT");
             emit("pop");
             emit("ldc 0");
-            emit("L" + ":");
+            emit("EXIT:");
 
             return null;
         }
@@ -571,10 +571,10 @@ public class CodeGenerator
             compileExp(p.exp_1);
             compileExp(p.exp_2);
 
-            emit("if_icmple L");
+            emit("if_icmple EXIT");
             emit("pop");
             emit("ldc 0");
-            emit("L" + ":");
+            emit("EXIT:");
 
             return null;
         }
@@ -587,10 +587,10 @@ public class CodeGenerator
             compileExp(p.exp_1);
             compileExp(p.exp_2);
 
-            emit("if_icmpge L");
+            emit("if_icmpge DONE");
             emit("pop");
             emit("ldc 0");
-            emit("L" + ":");
+            emit("DONE:");
 
             return null;
         }
@@ -603,10 +603,10 @@ public class CodeGenerator
             compileExp(p.exp_1);
             compileExp(p.exp_2);
 
-            emit("if_icmpeq L");
+            emit("if_icmpeq DONE");
             emit("pop");
             emit("ldc 0");
-            emit("L" + ":");
+            emit("DONE:");
             return null;
         }
 
@@ -618,10 +618,10 @@ public class CodeGenerator
             compileExp(p.exp_1);
             compileExp(p.exp_2);
 
-            emit("if_icmpne L");
+            emit("if_icmpne DONE");
             emit("pop");
             emit("ldc 0");
-            emit("L" + ":");
+            emit("DONE:");
 
             return null;
         }
