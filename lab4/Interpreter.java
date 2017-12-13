@@ -20,6 +20,7 @@ public class Interpreter {
         @Override
         public Value visit(Prog p, Object obj) {
             //TODO defs
+
             return evalMain(p.main_);
         }
     }
@@ -47,6 +48,7 @@ public class Interpreter {
 
         @Override
         public Object visit(DDef p, Object arg) {
+
             return null;
         }
     }
@@ -107,18 +109,48 @@ public class Interpreter {
 
         @Override
         public Value visit(ELt p, Env env) {
-            return null;
+
+            Value v1 = evalExp(p.exp_1, env);
+            Value v2 = evalExp(p.exp_2, env);
+
+            Integer i;
+
+            if(v1.asInt() < v2.asInt()) {
+                i = 1;
+            }
+
+            else {
+                i = 0;
+            }
+
+            return new VInt(i);
         }
 
         @Override
         public Value visit(EIf p, Env env) {
-            return null;
+
+            Value v1 = evalExp(p.exp_1, env);
+
+            Value res;
+
+            if(v1.asInt() == 1) {
+                res = evalExp(p.exp_2, env);
+            }
+
+            else {
+                res = evalExp(p.exp_3, env);
+            }
+
+            return res;
         }
 
         @Override
         public Value visit(EAbs p, Env env) {
 
-            return null;
+            Value v = evalExp(p.exp_, env);
+            env.addVar(p.ident_, v);
+
+            return v;
         }
     }
     
