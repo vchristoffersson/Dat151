@@ -16,7 +16,22 @@ public class Interpreter {
 
         @Override
         public Value visit(Prog p, Object obj) {
-            return null;
+            //TODO defs
+            return evalMain(p.main_);
+        }
+    }
+
+    //TODO implement main/visitor
+    Value evalMain(Main p){
+        return p.accept(new MainVisitor(), null);
+    }
+
+    class MainVisitor implements Main.Visitor<Value, Object>{
+
+        @Override
+        public Value visit(DMain p, Object arg) {
+            //TODO env?
+            return evalExp(p.exp_, null);
         }
     }
 
@@ -25,7 +40,7 @@ public class Interpreter {
         p.accept(new DefVisitor(), null);
     }
 
-    public class DefVisitor implements Def.Visitor<Object, Object>{
+    class DefVisitor implements Def.Visitor<Object, Object>{
 
         @Override
         public Object visit(DDef p, Object arg) {
