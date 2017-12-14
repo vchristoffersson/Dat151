@@ -1,16 +1,21 @@
 import CPP.Absyn.*;
 
 import java.util.HashMap;
+import java.util.ListIterator;
 import java.util.Map;
+import java.util.TreeMap;
 
 public class Interpreter {
 
-    //TODO implement entry
-    public void interpret(Program p) {
+    private Map<String,Exp> signature = new TreeMap<>();
+    private Boolean callByName = false;
+
+    public void interpret(Program p, Boolean callByName) {
+        this.callByName = callByName;
         Value val = evalProg(p);
+        System.out.println(val.asInt());
     }
 
-    //TODO implement program/visitor
     Value evalProg(Program p) {
         return p.accept(new ProgramVisitor(), null);
     }
@@ -19,13 +24,14 @@ public class Interpreter {
 
         @Override
         public Value visit(Prog p, Object obj) {
-            //TODO defs
+            for(Def def : p.listdef_){
+                evalDef(def);
+            }
 
             return evalMain(p.main_);
         }
     }
 
-    //TODO implement main/visitor
     Value evalMain(Main p) {
         return p.accept(new MainVisitor(), null);
     }
@@ -34,12 +40,10 @@ public class Interpreter {
 
         @Override
         public Value visit(DMain p, Object arg) {
-            //TODO env?
-            return evalExp(p.exp_, null);
+            return evalExp(p.exp_, new Env());
         }
     }
 
-    //TODO implement defs/visitor
     void evalDef(Def p) {
         p.accept(new DefVisitor(), null);
     }
@@ -48,16 +52,23 @@ public class Interpreter {
 
         @Override
         public Object visit(DDef p, Object arg) {
+            Exp exp = p.exp_;
+
+            ListIterator<String> it = p.listident_.listIterator(p.listident_.size()+1);
+            while(it.hasPrevious()){
+                exp = new EAbs(it.previous(), exp);
+            }
+
+            signature.put(p.ident_, exp);
 
             return null;
         }
     }
 
-    //TODO implement expressions/visitor
     Value evalExp(Exp p, Env env){
-        return p.accept(new ExpVisitor(), env); 
+        return p.accept(new ExpVisitor(), env);
     }
-    
+
     public class ExpVisitor implements Exp.Visitor<Value, Env>{
 
         @Override
@@ -78,7 +89,15 @@ public class Interpreter {
 
         @Override
         public Value visit(EApp p, Env env) {
-            return null;
+            Value clos = evalExp(p.exp_1, env);
+            Value val;
+
+            if(callByName){
+                val = new VClosure(p.exp_2, env);
+            } else {
+                val = evalExp(p.exp_2, env);
+            }
+            return clos.eval();
         }
 
         @Override
@@ -146,21 +165,12 @@ public class Interpreter {
 
         @Override
         public Value visit(EAbs p, Env env) {
-
-            Value v = evalExp(p.exp_, env);
-            env.addVar(p.ident_, v);
-
-            return v;
+            return new VClosure(p, env);
         }
     }
-    
 
-    abstract class Value {
-        abstract int asInt();
-        abstract Value getValue();
-    }
-    
-    //TODO implement environment
+
+
     public class Env {
 
         public Map<String , Value> values;
@@ -169,6 +179,7 @@ public class Interpreter {
             values = new HashMap<>();
         }
 
+        //not needed?
         public void addVar(String id, Value v) {
             values.put(id,v);
         }
@@ -177,14 +188,20 @@ public class Interpreter {
             return values.get(id);
         }
     }
-    
+
+    abstract class Value {
+        abstract int asInt();
+        abstract Value getValue();
+        abstract Value eval();
+    }
+
     class VInt extends Value {
-        int value;    
-        
+        int value;
+
         VInt(int value){
             this.value = value;
         }
-        
+
         @Override
         int asInt() {
             return value;
@@ -194,17 +211,22 @@ public class Interpreter {
         Value getValue() {
             return this;
         }
+
+        @Override
+        Value eval() {
+            throw new RuntimeException("not a function");
+        }
     }
-    
+
     class VClosure extends Value {
         Exp exp;
         Env env;
-        
+
         VClosure(Exp exp, Env env){
             this.exp = exp;
             this.env = env;
         }
-        
+
         @Override
         int asInt() {
             throw new RuntimeException("not an int");
@@ -214,8 +236,17 @@ public class Interpreter {
         Value getValue() {
             return evalExp(exp, env);
         }
+
+        @Override
+        Value eval() {
+            if(exp instanceof EAbs){
+                EAbs eAbs = (EAbs) exp;
+                return evalExp(eAbs, env);
+            }
+            throw new RuntimeException("not a function");
+        }
     }
-    
-    
-    
+
+
+
 }
