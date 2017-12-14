@@ -1,119 +1,216 @@
 import CPP.Absyn.*;
+import java.util.*;
 
 public class Interpreter {
- 
-    //TODO implement entry
-    public void interpret(Program p){
+
+    private Map<String,Exp> signature = new TreeMap<>();
+    private Boolean callByName = false;
+
+    public void interpret(Program p, Boolean callByName) {
+        this.callByName = callByName;
         Value val = evalProg(p);
+        if(val instanceof VInt)
+            System.out.println(val.asInt());
+        else
+            throw new RuntimeException("main should evaluate to int");
     }
-    
-    //TODO implement program/visitor
-    Value evalProg(Program p){
+
+    Value evalProg(Program p) {
         return p.accept(new ProgramVisitor(), null);
     }
-    
-    class ProgramVisitor implements Program.Visitor<Value, Object>{
+
+    class ProgramVisitor implements Program.Visitor<Value, Object> {
 
         @Override
         public Value visit(Prog p, Object obj) {
-            //TODO defs
+            for(Def def : p.listdef_){
+                evalDef(def);
+            }
+
             return evalMain(p.main_);
         }
     }
 
-    //TODO implement main/visitor
-    Value evalMain(Main p){
+    Value evalMain(Main p) {
         return p.accept(new MainVisitor(), null);
     }
 
-    class MainVisitor implements Main.Visitor<Value, Object>{
+    class MainVisitor implements Main.Visitor<Value, Object> {
 
         @Override
         public Value visit(DMain p, Object arg) {
-            //TODO env?
-            return evalExp(p.exp_, null);
+            return evalExp(p.exp_, new Env());
         }
     }
 
-    //TODO implement defs/visitor
-    void evalDef(Def p){
+    void evalDef(Def p) {
         p.accept(new DefVisitor(), null);
     }
 
-    class DefVisitor implements Def.Visitor<Object, Object>{
+    class DefVisitor implements Def.Visitor<Object, Object> {
 
         @Override
         public Object visit(DDef p, Object arg) {
+            Exp exp = p.exp_;
+
+            ListIterator<String> it = p.listident_.listIterator(p.listident_.size()+1);
+            while(it.hasPrevious()){
+                exp = new EAbs(it.previous(), exp);
+            }
+
+            signature.put(p.ident_, exp);
+
             return null;
         }
     }
 
-    //TODO implement expressions/visitor
     Value evalExp(Exp p, Env env){
-        return p.accept(new ExpVisitor(), env); 
+        return p.accept(new ExpVisitor(), env);
     }
-    
-    class ExpVisitor implements Exp.Visitor<Value, Env>{
+
+    public class ExpVisitor implements Exp.Visitor<Value, Env>{
 
         @Override
         public Value visit(EVar p, Env env) {
-            return null;
+
+            Value v = env.getValue(p.ident_);
+            if(v == null){
+                Exp exp = signature.get(p.ident_);
+                if(exp == null){
+                    throw new RuntimeException("not a variable nor function");
+                }
+                return evalExp(exp, env);
+            }
+            return v;
         }
 
         @Override
         public Value visit(EInt p, Env env) {
-            return null;
+
+            VInt v = new VInt(p.integer_);
+
+            return v;
         }
 
         @Override
         public Value visit(EApp p, Env env) {
-            return null;
+            Value clos = evalExp(p.exp_1, env);
+            Value val;
+
+            if(callByName){
+                val = new VClosure(p.exp_2, env);
+            } else {
+                val = evalExp(p.exp_2, env);
+            }
+            return clos.eval(val);
         }
 
         @Override
         public Value visit(EAdd p, Env env) {
-            return null;
+
+            Value v1 = evalExp(p.exp_1, env);
+            Value v2 = evalExp(p.exp_2, env);
+
+            Integer add = v1.asInt() + v2.asInt();
+
+            VInt total = new VInt(add);
+
+            return total;
         }
 
         @Override
         public Value visit(ESub p, Env env) {
-            return null;
+
+            Value v1 = evalExp(p.exp_1, env);
+            Value v2 = evalExp(p.exp_2, env);
+
+            Integer sub = v1.asInt() - v2.asInt();
+
+            VInt total = new VInt(sub);
+
+            return total;
         }
 
         @Override
         public Value visit(ELt p, Env env) {
-            return null;
+
+            Value v1 = evalExp(p.exp_1, env);
+            Value v2 = evalExp(p.exp_2, env);
+
+            Integer i;
+
+            if(v1.asInt() < v2.asInt()) {
+                i = 1;
+            }
+
+            else {
+                i = 0;
+            }
+
+            return new VInt(i);
         }
 
         @Override
         public Value visit(EIf p, Env env) {
-            return null;
+
+            Value v1 = evalExp(p.exp_1, env);
+
+            Value res;
+
+            if(v1.asInt() == 1) {
+                res = evalExp(p.exp_2, env);
+            }
+
+            else {
+                res = evalExp(p.exp_3, env);
+            }
+
+            return res;
         }
 
         @Override
         public Value visit(EAbs p, Env env) {
-            return null;
+            return new VClosure(p, env);
         }
     }
-    
+
+
+
+    public class Env {
+
+        Map<String, Value> values;
+
+        Env() {
+            values = new HashMap<>();
+        }
+
+        Env (Map<String, Value> values, String id, Value value){
+            this.values = new HashMap<>(values);
+            this.values.put(id, value);
+        }
+
+        Value getValue(String id) {
+            return values.get(id);
+        }
+
+        Env extInstance(String id, Value val){
+            return new Env(values, id, val);
+        }
+    }
 
     abstract class Value {
         abstract int asInt();
         abstract Value getValue();
+        abstract Value eval(Value val);
     }
-    
-    //TODO implement environment
-    class Env {
-        
-    }
-    
+
     class VInt extends Value {
-        int value;    
-        
+        int value;
+
         VInt(int value){
             this.value = value;
         }
-        
+
         @Override
         int asInt() {
             return value;
@@ -123,17 +220,22 @@ public class Interpreter {
         Value getValue() {
             return this;
         }
+
+        @Override
+        Value eval(Value val) {
+            throw new RuntimeException("not a function");
+        }
     }
-    
+
     class VClosure extends Value {
         Exp exp;
         Env env;
-        
+
         VClosure(Exp exp, Env env){
             this.exp = exp;
             this.env = env;
         }
-        
+
         @Override
         int asInt() {
             throw new RuntimeException("not an int");
@@ -143,8 +245,17 @@ public class Interpreter {
         Value getValue() {
             return evalExp(exp, env);
         }
+
+        @Override
+        Value eval(Value val) {
+            if(exp instanceof EAbs){
+                EAbs fun = (EAbs) exp;
+                return evalExp(fun, env.extInstance(fun.ident_, val));
+            }
+            throw new RuntimeException("not a function");
+        }
     }
-    
-    
-    
+
+
+
 }
