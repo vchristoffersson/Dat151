@@ -75,7 +75,13 @@ public class Interpreter {
         public Value visit(EVar p, Env env) {
 
             Value v = env.getValue(p.ident_);
-
+            if(v == null){
+                Exp exp = signature.get(p.ident_);
+                if(exp == null){
+                    throw new RuntimeException("not a variable nor function");
+                }
+                return evalExp(exp, env);
+            }
             return v;
         }
 
@@ -97,7 +103,7 @@ public class Interpreter {
             } else {
                 val = evalExp(p.exp_2, env);
             }
-            return clos.eval();
+            return clos.eval(val);
         }
 
         @Override
@@ -179,6 +185,11 @@ public class Interpreter {
             values = new HashMap<>();
         }
 
+        public Env(Map<String, Value> values, String id, Value value){
+            this.values = values;
+            this.values.put(id, value);
+        }
+
         //not needed?
         public void addVar(String id, Value v) {
             values.put(id,v);
@@ -187,12 +198,16 @@ public class Interpreter {
         public Value getValue(String id) {
             return values.get(id);
         }
+
+        Env extInstance(String id, Value val){
+            return new Env(values, id, val);
+        }
     }
 
     abstract class Value {
         abstract int asInt();
         abstract Value getValue();
-        abstract Value eval();
+        abstract Value eval(Value val);
     }
 
     class VInt extends Value {
@@ -213,7 +228,7 @@ public class Interpreter {
         }
 
         @Override
-        Value eval() {
+        Value eval(Value val) {
             throw new RuntimeException("not a function");
         }
     }
@@ -238,10 +253,10 @@ public class Interpreter {
         }
 
         @Override
-        Value eval() {
+        Value eval(Value val) {
             if(exp instanceof EAbs){
-                EAbs eAbs = (EAbs) exp;
-                return evalExp(eAbs, env);
+                EAbs fun = (EAbs) exp;
+                return evalExp(fun, env.extInstance(fun.ident_, val));
             }
             throw new RuntimeException("not a function");
         }
