@@ -1,40 +1,66 @@
-# Makefile for lab4 in java1.5
+# Makefile for lab2 in java1.5
 
 JAVAC = javac
 JAVAC_FLAGS = -sourcepath .
 
 JAVA = java
-CUPFLAGS = -nopositions -expect 100 -dump_states
 
-# Name of generated .cup file for bnfc 2.8.1
-CUPFILE = CPP/CPP.cup
-# WAS: CUPFILE = CPP/CPP.cup
+# Name of generated .cup file for bnfc 2.8 master
+CUPFILE = Fun/Fun.cup
 
-.PHONY: bnfc lab3 clean distclean vclean
+test_file = ./lab4
 
-all: bnfc lab3
+.PHONY: bnfc lab4 clean distclean vclean
 
-lab3:
+default: bnfc lab4
+
+all: bnfc lab4 test
+
+test : $(test_file)
+	-$(test_file) test/good1.hs
+	-$(test_file) -n test/good1.hs
+	-$(test_file) -n test/good2.hs
+	-$(test_file) test/good3.hs
+	-$(test_file) -n test/good3.hs
+	-$(test_file) test/good4.hs
+#	-$(test_file) -n test/good4.hs
+	-$(test_file) -n test/good5.hs
+	-$(test_file) test/good6.hs
+#	-$(test_file) -n test/good6.hs
+	-$(test_file) test/good7.hs
+#	-$(test_file) -n test/good7.hs
+	-$(test_file) test/good8.hs
+	-$(test_file) -n test/good8.hs
+	-$(test_file) test/good9.hs
+	-$(test_file) -n test/good9.hs
+	-! $(test_file) test/bad1.hs
+	-! $(test_file) test/bad2.hs
+	-! $(test_file) test/bad3.hs
+	-! $(test_file) test/bad4.hs
+	-! $(test_file) test/bad5.hs
+	-! $(test_file) test/bad6.hs
+
+lab4:
 	${JAVAC} ${JAVAC_FLAGS} lab4.java
 	chmod a+x lab4
 
 bnfc:
-	bnfc -java CPP.cf
-	${JAVA} ${JAVA_FLAGS} JLex.Main CPP/Yylex
+	bnfc -java1.5 Fun.cf
+	${JAVA} ${JAVA_FLAGS} JLex.Main Fun/Yylex
 	${JAVA} ${JAVA_FLAGS} java_cup.Main -nopositions -expect 100 $(CUPFILE)
-	mv sym.java parser.java CPP
+	mv sym.java parser.java Fun
 
 clean:
-	 -rm -f CPP/Absyn/*.class CPP/*.class
-	 -rm -f .dvi CPP.aux CPP.log CPP.ps  *.class
+	 -rm -f Fun/Absyn/*.class Fun/*.class
+	 -rm -f .dvi Fun.aux Fun.log Fun.ps  *.class
 
 distclean: vclean
 
 vclean: clean
-	 -rm -f CPP/Absyn/*.java
-	 -rmdir CPP/Absyn/
-	 -rm -f CPP.tex CPP.dvi CPP.aux CPP.log CPP.ps
-	 -rm -f CPP/Yylex $(CUPFILE) CPP/Yylex.java CPP/VisitSkel.java CPP/ComposVisitor.java CPP/AbstractVisitor.java CPP/FoldVisitor.java CPP/AllVisitor.java CPP/PrettyPrinter.java CPP/Skeleton.java CPP/Test.java CPP/sym.java CPP/parser.java CPP/*.class
-	 -rmdir -p CPP/
+	 -rm -f Fun/Absyn/*.java
+	 -rmdir Fun/Absyn/
+	 -rm -f Fun.tex Fun.dvi Fun.aux Fun.log Fun.ps
+	 -rm -f Fun/Yylex $(CUPFILE) Fun/Yylex.java Fun/VisitSkel.java Fun/ComposVisitor.java Fun/AbstractVisitor.java Fun/FoldVisitor.java Fun/AllVisitor.java Fun/PrettyPrinter.java Fun/Skeleton.java Fun/Test.java Fun/sym.java Fun/parser.java Fun/*.class
+	 -rmdir -p Fun/
 
 # EOF

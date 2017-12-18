@@ -1,4 +1,4 @@
-import CPP.Absyn.*;
+import Fun.Absyn.*;
 import java.util.*;
 
 public class Interpreter {
@@ -6,8 +6,11 @@ public class Interpreter {
     private Map<String,Exp> signature = new TreeMap<>();
     private Boolean callByName = false;
 
-    public void interpret(Program p, Boolean callByName) {
-        this.callByName = callByName;
+    public Interpreter(Boolean strategy){
+        callByName = strategy;
+    }
+
+    public void interpret(Program p) {
         Value val = evalProg(p);
         if(val instanceof VInt)
             System.out.println(val.asInt());
@@ -53,9 +56,10 @@ public class Interpreter {
         public Object visit(DDef p, Object arg) {
             Exp exp = p.exp_;
 
-            ListIterator<String> it = p.listident_.listIterator(p.listident_.size()+1);
-            while(it.hasPrevious()){
-                exp = new EAbs(it.previous(), exp);
+            Iterator<String> it = p.listident_.descendingIterator();
+
+            while(it.hasNext()){
+                exp = new EAbs(it.next(), exp);
             }
 
             signature.put(p.ident_, exp);
@@ -81,7 +85,7 @@ public class Interpreter {
                 }
                 return evalExp(exp, env);
             }
-            return v;
+            return v.getValue();
         }
 
         @Override
