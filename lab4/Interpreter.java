@@ -83,7 +83,7 @@ public class Interpreter {
                 if(exp == null){
                     throw new RuntimeException("not a variable nor function");
                 }
-                return evalExp(exp, env);
+                return evalExp(exp, new Env());
             }
             return v.getValue();
         }
@@ -209,7 +209,7 @@ public class Interpreter {
     }
 
     class VInt extends Value {
-        int value;
+        final int value;
 
         VInt(int value){
             this.value = value;
@@ -232,8 +232,8 @@ public class Interpreter {
     }
 
     class VClosure extends Value {
-        Exp exp;
-        Env env;
+        final Exp exp;
+        final Env env;
 
         VClosure(Exp exp, Env env){
             this.exp = exp;
@@ -254,12 +254,9 @@ public class Interpreter {
         Value eval(Value val) {
             if(exp instanceof EAbs){
                 EAbs fun = (EAbs) exp;
-                return evalExp(fun, env.extInstance(fun.ident_, val));
+                return evalExp(fun.exp_, env.extInstance(fun.ident_, val));
             }
             throw new RuntimeException("not a function");
         }
     }
-
-
-
 }
